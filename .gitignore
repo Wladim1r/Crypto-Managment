@@ -1,0 +1,9 @@
+.env
+
+go.sum
+go.mod
+
+CLAUDE.md
+GEMINI.md
+
+binarnik
