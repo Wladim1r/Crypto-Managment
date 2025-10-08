@@ -1,9 +1,6 @@
 .env
 
-go.sum
-go.mod
-
-CLAUDE.md
-GEMINI.md
+*.md
+!README.md
 
 binarnik
