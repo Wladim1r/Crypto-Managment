@@ -1,4 +1,4 @@
-package ws
+package websocket
 
 import (
 	"log/slog"
@@ -31,8 +31,7 @@ func (c *WSclient) Start() {
 			continue
 		}
 
-		// TODO: witek's job
-		go c.handlePinPong()
+		go c.setupPingPong()
 
 		c.readMessage()
 	}
@@ -47,10 +46,6 @@ func (c *WSclient) connect() error {
 	c.conn = conn
 
 	return nil
-}
-
-func (c *WSclient) handlePinPong() {
-	// ...
 }
 
 func (c *WSclient) readMessage() {
