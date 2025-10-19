@@ -7,25 +7,25 @@ import (
 	"github.com/WWoi/web-parcer/internal/models"
 )
 
-type Proccessor struct {
+type Processor struct {
 	inputChan  <-chan []byte
 	outputChan chan<- models.UniversalTrade
 }
 
-func New(inChan chan []byte, outChan chan models.UniversalTrade) *Proccessor {
-	return &Proccessor{
+func New(inChan chan []byte, outChan chan models.UniversalTrade) *Processor {
+	return &Processor{
 		inputChan:  inChan,
 		outputChan: outChan,
 	}
 }
 
-func (p *Proccessor) Start() {
+func (p *Processor) Start() {
 	for range 10 {
 		go p.worker()
 	}
 }
 
-func (p *Proccessor) worker() {
+func (p *Processor) worker() {
 	for rawMsg := range p.inputChan {
 
 		trade, err := p.parse(rawMsg)
@@ -37,7 +37,7 @@ func (p *Proccessor) worker() {
 	}
 }
 
-func (p *Proccessor) parse(rawMsg []byte) (models.UniversalTrade, error) {
+func (p *Processor) parse(rawMsg []byte) (models.UniversalTrade, error) {
 	var baseEvent struct {
 		EventType string `json:"e"`
 	}

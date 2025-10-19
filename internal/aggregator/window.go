@@ -37,9 +37,16 @@ func (a *Aggregator) Start() {
 
 }
 
-func (a *Aggregator) processIncoming() {
+// New creates a new Aggregator wired to the given input channel.
+func New(in <-chan models.UniversalTrade) *Aggregator {
+	return &Aggregator{
+		inputChan:            in,
+		priceChangeThreshold: 0.0001,
+	}
+}
 
-	for trade := range a.inputChan {
+func (a *Aggregator) processIncoming() {
+	for range a.inputChan {
 
 	}
 
