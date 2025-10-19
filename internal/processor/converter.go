@@ -12,7 +12,7 @@ func convertAggTradeToUniversalTrade(model models.AggTrade) (models.UniversalTra
 	if err != nil {
 		return models.UniversalTrade{}, err
 	}
-	quantity, err := strconv.ParseFloat(model.Qantity, 64)
+	quantity, err := strconv.ParseFloat(model.Quantity, 64)
 	if err != nil {
 		return models.UniversalTrade{}, err
 	}
