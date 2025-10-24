@@ -1,6 +1,8 @@
 package aggregator
 
 import (
+	"log/slog"
+
 	"github.com/WWoi/web-parcer/internal/models"
 )
 
@@ -27,6 +29,7 @@ func (mp *MetricsProcessor) Start() {
 
 func (mp *MetricsProcessor) processIncoming() {
 	for trade := range mp.inputChan {
+		slog.Info("MetricsProcessor received trade", "symbol", trade.Symbol, "price", trade.Price)
 		mp.processMiniTicker(trade)
 	}
 }
@@ -44,5 +47,6 @@ func (mp *MetricsProcessor) processMiniTicker(trade models.UniversalTrade) {
 	}
 
 	mp.outputChanDailyStat <- stat
+	slog.Info("Daily stat processed and sent to output", "symbol", stat.Symbol, "close_price", stat.ClosePrice)
 }
 

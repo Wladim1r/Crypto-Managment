@@ -30,9 +30,11 @@ func New(url string, output chan<- []byte, time time.Duration) *WSclient {
 }
 
 func (c *WSclient) Start() {
+	slog.Info("Starting websocket client")
 	for {
 		err := c.connect()
 		if err != nil {
+			slog.Error("Websocket connection error", slog.String("error", err.Error()))
 			time.Sleep(c.reconnectDelay)
 			continue
 		}
@@ -44,23 +46,25 @@ func (c *WSclient) Start() {
 }
 
 func (c *WSclient) connect() error {
+	slog.Info("Connecting to websocket", "url", c.url)
 	conn, _, err := websocket.DefaultDialer.Dial(c.url, nil)
 	if err != nil {
 		return err
 	}
-
+	slog.Info("Websocket connected")
 	c.conn = conn
 
 	return nil
 }
 
 func (c *WSclient) readMessage() {
+	slog.Info("Waiting for messages")
 	for {
 		_, msg, err := c.conn.ReadMessage()
 		if err != nil {
-			slog.Error("Read message", slog.String("error", err.Error()))
+			slog.Error("Read message error", slog.String("error", err.Error()))
 		}
-
+		slog.Info("Received message from websocket")
 		c.outputChan <- msg
 	}
 }

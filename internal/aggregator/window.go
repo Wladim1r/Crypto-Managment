@@ -3,6 +3,7 @@ package aggregator
 
 import (
 	"fmt"
+	"log/slog"
 	"math"
 	"strings"
 	"sync"
@@ -44,12 +45,14 @@ func (wa *WindowAggregator) Start() {
 
 func (wa *WindowAggregator) processIncoming() {
 	for trade := range wa.inputChan {
+		slog.Info("WindowAggregator received trade", "symbol", trade.Symbol, "price", trade.Price)
 		// Обрабатываем каждую сделку для построения свечей.
 		wa.processAggTrade(trade)
 	}
 }
 
 func (wa *WindowAggregator) processAggTrade(trade models.UniversalTrade) {
+	slog.Info("WindowAggregator processing trade", "symbol", trade.Symbol, "price", trade.Price)
 	if !wa.shouldProcess(&trade) {
 		return
 	}
@@ -133,6 +136,7 @@ func (wa *WindowAggregator) updateWindow(trade models.UniversalTrade, interval s
 	window.Quantity += trade.Quantity
 
 	window.Trades++
+	slog.Debug("Window updated", "symbol", trade.Symbol, "interval", interval, "start_time", window.StartTime, "trades", window.Trades)
 }
 
 // closeCompletedWindows ищет и закрывает завершенные окна.
@@ -156,6 +160,7 @@ func (wa *WindowAggregator) closeCompletedWindows(
 		if window.StartTime.Before(currentWindowStartTime) {
 			if window.Trades > 0 {
 				wa.outputChanWindow <- window
+				slog.Info("Window closed and sent to output", "symbol", window.Symbol, "interval", window.Interval, "start_time", window.StartTime, "trades", window.Trades)
 			}
 			wa.windowsMap.Delete(keyStr)
 		}

@@ -1,4 +1,3 @@
-// Package processor
 package processor
 
 import (
@@ -19,10 +18,9 @@ func convertAggTradeToUniversalTrade(model models.AggTrade) (models.UniversalTra
 	}
 
 	return models.UniversalTrade{
-		Symbol:    model.Symbol,
-		Timestamp: time.UnixMilli(model.EventTime),
-		EventType: model.EventType,
-
+		Symbol:       model.Symbol,
+		Timestamp:    time.UnixMilli(model.EventTime),
+		EventType:    model.EventType,
 		Price:        price,
 		Quantity:     quantity,
 		IsBuyerMaker: model.IsBuyer,
@@ -56,11 +54,10 @@ func convertMiniTickerToUniversalTrade(model models.MiniTicker) (models.Universa
 	}
 
 	return models.UniversalTrade{
-		Symbol:    model.Symbol,
-		Timestamp: time.UnixMilli(model.EventTime),
-		EventType: model.EventType,
-		Price:     cPrice,
-
+		Symbol:      model.Symbol,
+		Timestamp:   time.UnixMilli(model.EventTime),
+		EventType:   model.EventType,
+		Price:       cPrice,
 		OpenPrice:   oPrice,
 		HighPrice:   hPrice,
 		LowPrice:    lPrice,

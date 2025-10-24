@@ -2,6 +2,7 @@ package processor
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/WWoi/web-parcer/internal/models"
@@ -28,53 +29,83 @@ func (p *Processor) Start() {
 
 func (p *Processor) worker() {
 	for rawMsg := range p.inputChan {
-
 		trade, err := p.parse(rawMsg)
 		if err != nil {
+			slog.Error("Failed to parse message", slog.String("error", err.Error()))
 			continue
 		}
-
+		slog.Info("Parsed trade",
+			slog.String("symbol", trade.Symbol),
+			slog.Float64("price", trade.Price),
+			slog.String("type", trade.EventType))
 		p.outputChan <- trade
 	}
 }
 
 func (p *Processor) parse(rawMsg []byte) (models.UniversalTrade, error) {
-	var baseEvent struct {
-		EventType string `json:"e"`
+	// Парсим в map для гибкости
+	var rawMap map[string]interface{}
+	if err := json.Unmarshal(rawMsg, &rawMap); err != nil {
+		return models.UniversalTrade{}, fmt.Errorf("could not parse JSON: %w", err)
 	}
 
-	if err := json.Unmarshal(rawMsg, &baseEvent); err != nil {
-		slog.Error("Could not parse from JSON", slog.String("error", err.Error()))
-		return models.UniversalTrade{}, err
+	// Извлекаем data
+	dataVal, hasData := rawMap["data"]
+	if !hasData {
+		return models.UniversalTrade{}, fmt.Errorf("no data field found")
 	}
 
+	// Преобразуем data обратно в JSON bytes
+	dataBytes, err := json.Marshal(dataVal)
+	if err != nil {
+		return models.UniversalTrade{}, fmt.Errorf("could not marshal data: %w", err)
+	}
+
+	// Парсим data как map для определения типа события
+	var dataMap map[string]interface{}
+	if err := json.Unmarshal(dataBytes, &dataMap); err != nil {
+		return models.UniversalTrade{}, fmt.Errorf("could not parse data: %w", err)
+	}
+
+	// Извлекаем тип события
+	eVal, hasE := dataMap["e"]
+	if !hasE {
+		return models.UniversalTrade{}, fmt.Errorf("no event type field found")
+	}
+
+	eventType, ok := eVal.(string)
+	if !ok {
+		return models.UniversalTrade{}, fmt.Errorf("event type is not a string: %v", eVal)
+	}
+
+	// Парсим в нужную структуру в зависимости от типа
 	var unTrade models.UniversalTrade
-	var err error
 
-	switch baseEvent.EventType {
+	switch eventType {
 	case websocket.AggTrade:
 		var aggTrade models.AggTrade
-		if err = json.Unmarshal(rawMsg, &aggTrade); err != nil {
-			slog.Error("Could not parse from JSON", slog.String("error", err.Error()))
-			return models.UniversalTrade{}, err
+		if err := json.Unmarshal(dataBytes, &aggTrade); err != nil {
+			return models.UniversalTrade{}, fmt.Errorf("could not parse AggTrade: %w", err)
 		}
 
 		unTrade, err = convertAggTradeToUniversalTrade(aggTrade)
 		if err != nil {
-			return models.UniversalTrade{}, err
+			return models.UniversalTrade{}, fmt.Errorf("could not convert AggTrade: %w", err)
 		}
 
 	case websocket.MiniTicker:
 		var miniTicker models.MiniTicker
-		if err = json.Unmarshal(rawMsg, &miniTicker); err != nil {
-			slog.Error("Could not parse JSON", slog.String("error", err.Error()))
-			return models.UniversalTrade{}, err
+		if err := json.Unmarshal(dataBytes, &miniTicker); err != nil {
+			return models.UniversalTrade{}, fmt.Errorf("could not parse MiniTicker: %w", err)
 		}
 
 		unTrade, err = convertMiniTickerToUniversalTrade(miniTicker)
 		if err != nil {
-			return models.UniversalTrade{}, err
+			return models.UniversalTrade{}, fmt.Errorf("could not convert MiniTicker: %w", err)
 		}
+
+	default:
+		return models.UniversalTrade{}, fmt.Errorf("unknown event type: %s", eventType)
 	}
 
 	return unTrade, nil

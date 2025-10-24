@@ -1,10 +1,9 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"log/slog"
 	"os"
-	"os/signal"
 	"time"
 
 	"github.com/WWoi/web-parcer/internal/aggregator"
@@ -14,37 +13,53 @@ import (
 )
 
 func main() {
-	fmt.Println("crypto-asset-tracker starting")
+	// Initialize logger
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
+	slog.SetDefault(slog.New(handler))
 
-	// Context for graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// Capture signals
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, os.Interrupt)
-	go func() {
-		<-sigs
-		cancel()
-	}()
+	slog.Info("Starting application")
 
 	// Channels
-	rawMessages := make(chan []byte, 100)
-	procOut := make(chan models.UniversalTrade, 100)
+	rawMessagesChan := make(chan []byte, 1000)
+	universalTradeChan := make(chan models.UniversalTrade, 1000)
+	windowChan := make(chan *models.Window, 100)
+	dailyStatChan := make(chan *models.DailyStat, 100)
 
-	// Websocket client (url can be changed)
-	ws := websocket.New("wss://example.com/ws", rawMessages, 5*time.Second)
-	go ws.Start()
+	// Websocket client
+	slog.Info("Initializing websocket client")
+	wsClient := websocket.New(
+		"wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/ethusdt@aggTrade/bnbusdt@aggTrade",
+		rawMessagesChan,
+		5*time.Second,
+	)
+	go wsClient.Start()
 
-	// Processor (bytes -> models.UniversalTrade)
-	proc := processor.New(rawMessages, procOut)
-	go proc.Start()
+	// Processor
+	slog.Info("Initializing processor")
+	proc := processor.New(rawMessagesChan, universalTradeChan)
+	proc.Start()
 
-	// Aggregator skeleton — wire input channel
-	agg := aggregator.New(procOut)
-	go agg.Start()
+	// Aggregators
+	slog.Info("Initializing window aggregator")
+	windowAggregator := aggregator.NewWindowAggregator(universalTradeChan, windowChan)
+	windowAggregator.Start()
 
-	// Wait until context canceled
-	<-ctx.Done()
-	fmt.Println("shutting down")
+	slog.Info("Initializing metrics processor")
+	metricsProcessor := aggregator.NewMetricsProcessor(universalTradeChan, dailyStatChan)
+	metricsProcessor.Start()
+
+	// Printer
+	go func() {
+		for {
+			select {
+			case window := <-windowChan:
+				fmt.Printf("Window: %+v\n", window)
+			case dailyStat := <-dailyStatChan:
+				fmt.Printf("Daily Stat: %+v\n", dailyStat)
+			}
+		}
+	}()
+
+	// Keep the main goroutine alive
+	select {}
 }
