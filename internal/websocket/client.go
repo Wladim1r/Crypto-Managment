@@ -1,3 +1,4 @@
+// Package websocket
 package websocket
 
 import (
@@ -5,6 +6,11 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+)
+
+const (
+	AggTrade   = "aggTrade"
+	MiniTicker = "miniTicker"
 )
 
 type WSclient struct {

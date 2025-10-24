@@ -5,6 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/WWoi/web-parcer/internal/models"
+	"github.com/WWoi/web-parcer/internal/websocket"
 )
 
 type Processor struct {
@@ -51,9 +52,9 @@ func (p *Processor) parse(rawMsg []byte) (models.UniversalTrade, error) {
 	var err error
 
 	switch baseEvent.EventType {
-	case "aggTrade":
+	case websocket.AggTrade:
 		var aggTrade models.AggTrade
-		if err := json.Unmarshal(rawMsg, &aggTrade); err != nil {
+		if err = json.Unmarshal(rawMsg, &aggTrade); err != nil {
 			slog.Error("Could not parse from JSON", slog.String("error", err.Error()))
 			return models.UniversalTrade{}, err
 		}
@@ -63,9 +64,9 @@ func (p *Processor) parse(rawMsg []byte) (models.UniversalTrade, error) {
 			return models.UniversalTrade{}, err
 		}
 
-	case "miniTicker":
+	case websocket.MiniTicker:
 		var miniTicker models.MiniTicker
-		if err := json.Unmarshal(rawMsg, &miniTicker); err != nil {
+		if err = json.Unmarshal(rawMsg, &miniTicker); err != nil {
 			slog.Error("Could not parse JSON", slog.String("error", err.Error()))
 			return models.UniversalTrade{}, err
 		}
