@@ -1,9 +1,9 @@
 package processor
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 
 	"github.com/WWoi/web-parcer/internal/models"
 	"github.com/WWoi/web-parcer/internal/websocket"
@@ -21,24 +21,38 @@ func New(inChan chan []byte, outChan chan models.UniversalTrade) *Processor {
 	}
 }
 
-func (p *Processor) Start() {
+func (p *Processor) Start(ctx context.Context) {
 	for range 10 {
-		go p.worker()
+		go p.worker(ctx)
 	}
+
+	<-ctx.Done() // опционально закрыть outputChan
 }
 
-func (p *Processor) worker() {
-	for rawMsg := range p.inputChan {
-		trade, err := p.parse(rawMsg)
-		if err != nil {
-			slog.Error("Failed to parse message", slog.String("error", err.Error()))
-			continue
+func (p *Processor) worker(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+
+		case rawMsg := <-p.inputChan:
+
+			trade, err := p.parse(rawMsg)
+			if err != nil {
+				//slog.Error("Failed to parse message", //slog.String("error", err.Error()))
+				continue
+			}
+			select {
+			case <-ctx.Done():
+				return
+			default:
+				//slog.Info("Parsed trade",
+				//slog.String("symbol", trade.Symbol),
+				//slog.Float64("price", trade.Price),
+				//slog.String("type", trade.EventType))
+				p.outputChan <- trade
+			}
 		}
-		slog.Info("Parsed trade",
-			slog.String("symbol", trade.Symbol),
-			slog.Float64("price", trade.Price),
-			slog.String("type", trade.EventType))
-		p.outputChan <- trade
 	}
 }
 

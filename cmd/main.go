@@ -1,66 +1,62 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"log/slog"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/WWoi/web-parcer/internal/aggregator"
 	"github.com/WWoi/web-parcer/internal/models"
-	"github.com/WWoi/web-parcer/internal/ownlog"
 	"github.com/WWoi/web-parcer/internal/processor"
 	"github.com/WWoi/web-parcer/internal/websocket"
 )
 
-func init() {
-	ownlog.Init()
-}
-
 func main() {
+	fmt.Println("crypto-asset-tracker starting")
 
-	slog.Info("Starting application")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	// Channels
-	rawMessagesChan := make(chan []byte, 1000)
-	universalTradeChan := make(chan models.UniversalTrade, 1000)
-	windowChan := make(chan *models.Window, 100)
-	dailyStatChan := make(chan *models.DailyStat, 100)
-
-	// Websocket client
-	slog.Info("Initializing websocket client")
-	wsClient := websocket.New(
-		"wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/ethusdt@aggTrade/bnbusdt@aggTrade",
-		rawMessagesChan,
-		5*time.Second,
-	)
-	go wsClient.Start()
-
-	// Processor
-	slog.Info("Initializing processor")
-	proc := processor.New(rawMessagesChan, universalTradeChan)
-	proc.Start()
-
-	// Aggregators
-	slog.Info("Initializing window aggregator")
-	windowAggregator := aggregator.NewWindowAggregator(universalTradeChan, windowChan)
-	windowAggregator.Start()
-
-	slog.Info("Initializing metrics processor")
-	metricsProcessor := aggregator.NewMetricsProcessor(universalTradeChan, dailyStatChan)
-	metricsProcessor.Start()
-
-	// Printer
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, os.Interrupt)
 	go func() {
-		for {
-			select {
-			case window := <-windowChan:
-				fmt.Printf("Window: %+v\n", window)
-			case dailyStat := <-dailyStatChan:
-				fmt.Printf("Daily Stat: %+v\n", dailyStat)
-			}
+		<-sigs
+		cancel()
+	}()
+
+	rawMessages := make(chan []byte, 100)
+	procOut := make(chan models.UniversalTrade, 100)
+
+	ws := websocket.New("wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/ethusdt@aggTrade/bnbusdt@aggTrade", rawMessages, 5*time.Second)
+	go ws.Start(ctx)
+
+	proc := processor.New(rawMessages, procOut)
+	go proc.Start(ctx)
+
+	windowsChan := make(chan *models.Window)
+	agg := aggregator.NewWindowAggregator(procOut, windowsChan)
+	go agg.Start(ctx)
+
+	// Убираем дублирование вывода
+	go func() {
+		for window := range windowsChan {
+			fmt.Printf(
+				"🕯️ CANDLE: %s [%s] | Open: %.2f → Close: %.2f | High: %.2f | Low: %.2f | Vol: %.4f | Trades: %d\n",
+				window.Symbol,
+				window.Interval,
+				window.Open,
+				window.Close,
+				window.High,
+				window.Low,
+				window.Quantity,
+				window.Trades,
+			)
 		}
 	}()
 
-	// Keep the main goroutine alive
-	select {}
+	<-ctx.Done()
+	fmt.Println("\nshutting down")
+	time.Sleep(100 * time.Millisecond)
 }
