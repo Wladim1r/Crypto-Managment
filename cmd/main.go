@@ -3,19 +3,20 @@ package main
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"time"
 
 	"github.com/WWoi/web-parcer/internal/aggregator"
 	"github.com/WWoi/web-parcer/internal/models"
+	"github.com/WWoi/web-parcer/internal/ownlog"
 	"github.com/WWoi/web-parcer/internal/processor"
 	"github.com/WWoi/web-parcer/internal/websocket"
 )
 
+func init() {
+	ownlog.Init()
+}
+
 func main() {
-	// Initialize logger
-	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
-	slog.SetDefault(slog.New(handler))
 
 	slog.Info("Starting application")
 
