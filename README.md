@@ -1,4 +1,4 @@
-# Crypto-Managment
+# Crypto-asset-tracker
 
 Минимальный проект для сбора и агрегации торговых данных (WIP).
 
