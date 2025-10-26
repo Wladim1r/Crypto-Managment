@@ -1,6 +1,7 @@
 package aggregator
 
 import (
+	"fmt"
 	"log/slog"
 
 	"github.com/WWoi/web-parcer/internal/models"
@@ -29,12 +30,22 @@ func (mp *MetricsProcessor) Start() {
 
 func (mp *MetricsProcessor) processIncoming() {
 	for trade := range mp.inputChan {
-		slog.Info("MetricsProcessor received trade", "symbol", trade.Symbol, "price", trade.Price)
-		mp.processMiniTicker(trade)
+		// ВАЖНО: Обрабатываем только miniTicker события
+		if trade.EventType == "24hrMiniTicker" {
+			mp.processMiniTicker(trade)
+		} else {
+			slog.Debug("Skipping non-miniTicker event", "type", trade.EventType, "symbol", trade.Symbol)
+		}
 	}
 }
 
 func (mp *MetricsProcessor) processMiniTicker(trade models.UniversalTrade) {
+	// Проверяем, что у нас есть данные miniTicker
+	if trade.OpenPrice == 0 && trade.HighPrice == 0 && trade.LowPrice == 0 {
+		slog.Warn("Received miniTicker with empty OHLC data", "symbol", trade.Symbol)
+		return
+	}
+
 	stat := &models.DailyStat{
 		Symbol:      trade.Symbol,
 		OpenPrice:   trade.OpenPrice,
@@ -47,6 +58,19 @@ func (mp *MetricsProcessor) processMiniTicker(trade models.UniversalTrade) {
 	}
 
 	mp.outputChanDailyStat <- stat
-	slog.Info("Daily stat processed and sent to output", "symbol", stat.Symbol, "close_price", stat.ClosePrice)
+	slog.Info("📊 Daily stat processed",
+		"symbol", stat.Symbol,
+		"close", stat.ClosePrice,
+		"24h_change", calculateChange(stat.OpenPrice, stat.ClosePrice))
 }
 
+func calculateChange(open, close float64) string {
+	if open == 0 {
+		return "N/A"
+	}
+	change := ((close - open) / open) * 100
+	if change >= 0 {
+		return fmt.Sprintf("+%.2f%%", change)
+	}
+	return fmt.Sprintf("%.2f%%", change)
+}

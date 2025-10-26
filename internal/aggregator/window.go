@@ -14,9 +14,9 @@ import (
 )
 
 const (
-	Interval10s = "10s"
-	Interval1h  = "1h"
-	Interval1d  = "1d"
+	interval10s = "10s"
+	interval1h  = "1h"
+	interval1d  = "1d"
 )
 
 type WindowAggregator struct {
@@ -104,9 +104,9 @@ func (wa *WindowAggregator) processIncoming() {
 
 func (wa *WindowAggregator) processAggTrade(trade models.UniversalTrade) {
 	// Всегда обновляем окна для всех трейдов
-	wa.updateWindow(trade, Interval10s)
-	wa.updateWindow(trade, Interval1h)
-	wa.updateWindow(trade, Interval1d)
+	wa.updateWindow(trade, interval10s)
+	wa.updateWindow(trade, interval1h)
+	wa.updateWindow(trade, interval1d)
 
 	// Проверяем, нужно ли обновить lastPrice для уведомлений
 	if wa.shouldUpdateLastPrice(&trade) {
@@ -131,11 +131,11 @@ func (wa *WindowAggregator) shouldUpdateLastPrice(trade *models.UniversalTrade) 
 
 func getIntervalDuration(interval string) time.Duration {
 	switch interval {
-	case Interval10s:
+	case interval10s:
 		return 10 * time.Second
-	case Interval1h:
+	case interval1h:
 		return time.Hour
-	case Interval1d:
+	case interval1d:
 		return 24 * time.Hour
 	default:
 		return 0

@@ -11,7 +11,7 @@ import (
 
 const (
 	AggTrade   = "aggTrade"
-	MiniTicker = "miniTicker"
+	MiniTicker = "24hrMiniTicker"
 )
 
 type WSclient struct {
@@ -47,7 +47,12 @@ func (c *WSclient) Start(ctx context.Context) {
 		default:
 			err := c.connect()
 			if err != nil {
-				log.Printf("❌Connection failed: %v. Retrying in %v. Url: %v", err, currentDelay, c.url)
+				log.Printf(
+					"❌ Connection failed: %v. Retrying in %v. Url: %v",
+					err,
+					currentDelay,
+					c.url,
+				)
 
 				// Ждем с проверкой контекста
 				select {
@@ -82,11 +87,6 @@ func (c *WSclient) Start(ctx context.Context) {
 	}
 }
 
-// Удаляем Reconnect или делаем ее приватной
-// func (c *WSclient) reconnect(ctx context.Context) {
-
-// }
-
 func (c *WSclient) connect() error {
 	conn, _, err := websocket.DefaultDialer.Dial(c.url, nil)
 	if err != nil {
@@ -97,7 +97,6 @@ func (c *WSclient) connect() error {
 	return nil
 }
 
-// readMessage тоже принимает context
 func (c *WSclient) readMessage(ctx context.Context) {
 	defer func() {
 		if c.conn != nil {
@@ -116,10 +115,14 @@ func (c *WSclient) readMessage(ctx context.Context) {
 
 			_, msg, err := c.conn.ReadMessage()
 			if err != nil {
-				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
-					slog.Error("❌Read message error", slog.String("error", err.Error()))
+				if websocket.IsUnexpectedCloseError(
+					err,
+					websocket.CloseGoingAway,
+					websocket.CloseAbnormalClosure,
+				) {
+					slog.Error("❌ Read message error", slog.String("error", err.Error()))
 				}
-				return // Выходим при ошибке чтения
+				return
 			}
 
 			// Отправляем сообщение в канал
