@@ -15,11 +15,11 @@ import (
 )
 
 const (
-	aggTrade = "wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/ethusdt@aggTrade/bnbusdt@aggTrade"
+	// aggTrade = "wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/ethusdt@aggTrade/bnbusdt@aggTrade"
 
 	// All - все монеты, Several - определенные
 	// @3000 -> присылает окно каждые 3 секунды (хотя по факту куда реже)
-	miniTickerAll     = "wss://stream.binance.com:9443/ws/!miniTicker@arr@3000ms"
+	// miniTickerAll     = "wss://stream.binance.com:9443/ws/!miniTicker@arr@3000ms"
 	miniTickerSeveral = "wss://stream.binance.com:9443/stream?streams=btcusdt@miniTicker/ethusdt@miniTicker/bnbusdt@miniTicker"
 )
 
@@ -67,7 +67,7 @@ func main() {
 			} else {
 				changeStr = fmt.Sprintf("📉 %.2f%%", change)
 			}
-
+			
 			fmt.Printf(
 				"📊 24h STATS: %s | Open: %.2f → Close: %.2f | High: %.2f | Low: %.2f | Vol: %.2f | %s\n",
 				stat.Symbol,
@@ -80,6 +80,27 @@ func main() {
 			)
 		}
 	}()
+
+	// windowsChan := make(chan *models.Window)
+	// agg := aggregator.NewWindowAggregator(procOut, windowsChan)
+	// go agg.Start(ctx)
+	//
+	// // Убираем дублирование вывода
+	// go func() {
+	// 	for window := range windowsChan {
+	// 		fmt.Printf(
+	// 			"🕯️ CANDLE: %s [%s] | Open: %.2f → Close: %.2f | High: %.2f | Low: %.2f | Vol: %.4f | Trades: %d\n",
+	// 			window.Symbol,
+	// 			window.Interval,
+	// 			window.Open,
+	// 			window.Close,
+	// 			window.High,
+	// 			window.Low,
+	// 			window.Quantity,
+	// 			window.Trades,
+	// 		)
+	// 	}
+	// }()
 
 	<-ctx.Done()
 	fmt.Println("\nshutting down")
