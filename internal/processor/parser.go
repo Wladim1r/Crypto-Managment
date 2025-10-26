@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/WWoi/web-parcer/internal/models"
 	"github.com/WWoi/web-parcer/internal/websocket"
@@ -26,7 +27,6 @@ func (p *Processor) Start(ctx context.Context) {
 		go p.worker(ctx)
 	}
 
-	<-ctx.Done()
 }
 
 func (p *Processor) worker(ctx context.Context) {
@@ -39,7 +39,7 @@ func (p *Processor) worker(ctx context.Context) {
 			trades, err := p.parse(rawMsg)
 			if err != nil {
 				// Можно раскомментировать для отладки:
-				// fmt.Printf("Parse error: %v\n", err)
+				// slog.Error("Failed to parse message", "error", err, "raw_message", string(rawMsg))
 				continue
 			}
 
@@ -55,11 +55,9 @@ func (p *Processor) worker(ctx context.Context) {
 }
 
 func (p *Processor) parse(rawMsg []byte) ([]models.UniversalTrade, error) {
-	// Сначала пробуем распарсить как массив (для !miniTicker@arr)
 	var tickersArray []models.MiniTicker
 	if err := json.Unmarshal(rawMsg, &tickersArray); err == nil {
-		// Успешно распарсили как массив
-		return p.parseTickerArray(tickersArray)
+		return p.parseTickerArray(tickersArray, rawMsg)
 	}
 
 	// Если не массив, пробуем формат с "stream" и "data"
@@ -121,13 +119,14 @@ func (p *Processor) parse(rawMsg []byte) ([]models.UniversalTrade, error) {
 		}
 
 	default:
-		return nil, fmt.Errorf("unknown event type: %s", eventType)
+		slog.Warn("Unknown even type received", "type", eventType)
+		return nil, nil 
 	}
 
 	return []models.UniversalTrade{unTrade}, nil
 }
 
-func (p *Processor) parseTickerArray(tickers []models.MiniTicker) ([]models.UniversalTrade, error) {
+func (p *Processor) parseTickerArray(tickers []models.MiniTicker, rawMsg []byte) ([]models.UniversalTrade, error) {
 	trades := make([]models.UniversalTrade, 0, len(tickers))
 
 	for _, ticker := range tickers {
@@ -140,7 +139,8 @@ func (p *Processor) parseTickerArray(tickers []models.MiniTicker) ([]models.Univ
 	}
 
 	if len(trades) == 0 {
-		return nil, fmt.Errorf("no valid tickers found in array")
+		slog.Warn("No valid tickers found in array", "raw_data", string(rawMsg))
+		return nil, nil
 	}
 
 	return trades, nil

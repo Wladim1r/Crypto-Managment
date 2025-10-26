@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"time"
@@ -28,7 +29,7 @@ func init() {
 }
 
 func main() {
-	fmt.Println("crypto-asset-tracker starting")
+	slog.Info("🚀 Application starting...")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -67,7 +68,7 @@ func main() {
 			} else {
 				changeStr = fmt.Sprintf("📉 %.2f%%", change)
 			}
-			
+
 			fmt.Printf(
 				"📊 24h STATS: %s | Open: %.2f → Close: %.2f | High: %.2f | Low: %.2f | Vol: %.2f | %s\n",
 				stat.Symbol,
@@ -103,6 +104,6 @@ func main() {
 	// }()
 
 	<-ctx.Done()
-	fmt.Println("\nshutting down")
+	slog.Info("Shutting down...")
 	time.Sleep(100 * time.Millisecond)
 }
