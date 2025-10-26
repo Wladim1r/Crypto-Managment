@@ -2,7 +2,6 @@ package websocket
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"time"
 
@@ -42,16 +41,16 @@ func (c *WSclient) Start(ctx context.Context) {
 			if c.conn != nil {
 				c.conn.Close()
 			}
-			log.Println("WebSocket client stopped")
+			slog.Info("WebSocket client stopped")
 			return
 		default:
 			err := c.connect()
 			if err != nil {
-				log.Printf(
-					"❌ Connection failed: %v. Retrying in %v. Url: %v",
-					err,
-					currentDelay,
-					c.url,
+				slog.Error(
+					"❌ Connection failed:",
+					"error", error,
+					"Retrying in", currentDelay 
+					"url", c.url,
 				)
 
 				// Ждем с проверкой контекста
@@ -72,12 +71,13 @@ func (c *WSclient) Start(ctx context.Context) {
 
 			// Успешное подключение
 			currentDelay = 1 * time.Second
-			log.Println("✅ WebSocket connected successfully")
+			slog.Info("✅ WebSocket connected successfully")
 
 			go c.setupPingPong()
-			c.readMessage(ctx) // Передаем контекст
+			c.readMessage(ctx)
 
 			// Соединение разорвано, ждем перед переподключением
+
 			select {
 			case <-time.After(2 * time.Second):
 			case <-ctx.Done():
