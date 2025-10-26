@@ -48,8 +48,8 @@ func (c *WSclient) Start(ctx context.Context) {
 			if err != nil {
 				slog.Error(
 					"❌ Connection failed:",
-					"error", error,
-					"Retrying in", currentDelay 
+					"error", err,
+					"Retrying in", currentDelay, 
 					"url", c.url,
 				)
 
