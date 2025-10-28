@@ -1,7 +1,6 @@
 package aggregator
 
 import (
-	"fmt"
 	"log/slog"
 
 	"github.com/WWoi/web-parcer/internal/models"
@@ -33,8 +32,6 @@ func (mp *MetricsProcessor) processIncoming() {
 		// ВАЖНО: Обрабатываем только miniTicker события
 		if trade.EventType == "24hrMiniTicker" {
 			mp.processMiniTicker(trade)
-		} else {
-			slog.Debug("Skipping non-miniTicker event", "type", trade.EventType, "symbol", trade.Symbol)
 		}
 	}
 }
@@ -61,16 +58,5 @@ func (mp *MetricsProcessor) processMiniTicker(trade models.UniversalTrade) {
 	slog.Info("📊 Daily stat processed",
 		"symbol", stat.Symbol,
 		"close", stat.ClosePrice,
-		"24h_change", calculateChange(stat.OpenPrice, stat.ClosePrice))
-}
-
-func calculateChange(open, close float64) string {
-	if open == 0 {
-		return "N/A"
-	}
-	change := ((close - open) / open) * 100
-	if change >= 0 {
-		return fmt.Sprintf("+%.2f%%", change)
-	}
-	return fmt.Sprintf("%.2f%%", change)
+		"24h_change", stat.ChangeFormatted())
 }

@@ -1,6 +1,7 @@
 .env
+local.yaml
 
 *.md
 !README.md
-chat_history.txt
+
 binarnik

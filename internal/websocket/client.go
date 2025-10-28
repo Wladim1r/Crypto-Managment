@@ -9,6 +9,15 @@ import (
 )
 
 const (
+	AggTradeURL = "wss://stream.binance.com:9443/stream?streams=btcusdt@aggTrade/ethusdt@aggTrade/bnbusdt@aggTrade"
+
+	// All - все монеты, Several - определенные
+	// @3000 -> присылает окно каждые 3 секунды (хотя по факту куда реже)
+	MiniTickerAllURL     = "wss://stream.binance.com:9443/ws/!miniTicker@arr@3000ms"
+	MiniTickerSeveralURL = "wss://stream.binance.com:9443/stream?streams=btcusdt@miniTicker/ethusdt@miniTicker/bnbusdt@miniTicker"
+)
+
+const (
 	AggTrade   = "aggTrade"
 	MiniTicker = "24hrMiniTicker"
 )
@@ -17,7 +26,6 @@ type WSclient struct {
 	url            string
 	conn           *websocket.Conn
 	outputChan     chan<- []byte
-	stopChan       chan struct{}
 	reconnectDelay time.Duration
 }
 
@@ -26,7 +34,6 @@ func New(url string, output chan<- []byte, reconnectDelay time.Duration) *WSclie
 		url:            url,
 		outputChan:     output,
 		reconnectDelay: reconnectDelay,
-		stopChan:       make(chan struct{}),
 	}
 }
 
@@ -49,7 +56,7 @@ func (c *WSclient) Start(ctx context.Context) {
 				slog.Error(
 					"❌ Connection failed",
 					"error", err,
-					"retry_in", currentDelay, 
+					"retry_in", currentDelay,
 					"url", c.url,
 				)
 

@@ -26,7 +26,6 @@ func (p *Processor) Start(ctx context.Context) {
 	for range 10 {
 		go p.worker(ctx)
 	}
-
 }
 
 func (p *Processor) worker(ctx context.Context) {
@@ -38,8 +37,7 @@ func (p *Processor) worker(ctx context.Context) {
 		case rawMsg := <-p.inputChan:
 			trades, err := p.parse(rawMsg)
 			if err != nil {
-				// Можно раскомментировать для отладки:
-				// slog.Error("Failed to parse message", "error", err, "raw_message", string(rawMsg))
+				slog.Error("Failed to parse message", "error", err, "raw_message", string(rawMsg))
 				continue
 			}
 
@@ -120,13 +118,16 @@ func (p *Processor) parse(rawMsg []byte) ([]models.UniversalTrade, error) {
 
 	default:
 		slog.Warn("Unknown even type received", "type", eventType)
-		return nil, nil 
+		return nil, nil
 	}
 
 	return []models.UniversalTrade{unTrade}, nil
 }
 
-func (p *Processor) parseTickerArray(tickers []models.MiniTicker, rawMsg []byte) ([]models.UniversalTrade, error) {
+func (p *Processor) parseTickerArray(
+	tickers []models.MiniTicker,
+	rawMsg []byte,
+) ([]models.UniversalTrade, error) {
 	trades := make([]models.UniversalTrade, 0, len(tickers))
 
 	for _, ticker := range tickers {

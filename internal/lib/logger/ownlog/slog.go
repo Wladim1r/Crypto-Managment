@@ -12,10 +12,20 @@ import (
 	"github.com/fatih/color"
 )
 
-// PrettyHandler — наш кастомный обработчик логов.
+const (
+	envLocal      = "local"
+	envProduction = "prod"
+
+	levelDebug = "debug"
+	levelInfo  = "info"
+	levelWarn  = "warn"
+	levelError = "error"
+)
+
 type prettyHandler struct {
-	out io.Writer
-	l   *log.Logger
+	out      io.Writer
+	l        *log.Logger
+	minLevel slog.Level
 }
 
 func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
@@ -47,22 +57,66 @@ func (h *prettyHandler) Handle(ctx context.Context, r slog.Record) error {
 	return nil
 }
 
-// WithAttrs и WithGroup нужны для совместимости с slog.Handler интерфейсом
-func (h *prettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler { return h }
-func (h *prettyHandler) WithGroup(name string) slog.Handler       { return h }
-func (h *prettyHandler) Enabled(_ context.Context, _ slog.Level) bool {
-	return true
-}
-
-func newPrettyHandler(out io.Writer) slog.Handler {
+func (h *prettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &prettyHandler{
-		out: out,
-		l:   log.New(out, "", 0),
+		out:      h.out,
+		l:        h.l,
+		minLevel: h.minLevel,
 	}
 }
 
-func Init() {
-	handler := newPrettyHandler(os.Stdout)
-	logger := slog.New(handler)
+func (h *prettyHandler) WithGroup(name string) slog.Handler {
+	return h
+}
+
+func (h *prettyHandler) Enabled(_ context.Context, level slog.Level) bool {
+	return level >= h.minLevel
+}
+
+func newPrettyHandler(out io.Writer, minLevel slog.Level) slog.Handler {
+	return &prettyHandler{
+		out:      out,
+		l:        log.New(out, "", 0),
+		minLevel: minLevel,
+	}
+}
+
+func initColorLog(logLevel string) *slog.Logger {
+	level := parseLogLevel(logLevel)
+	handler := newPrettyHandler(os.Stdout, level)
+	return slog.New(handler)
+}
+
+// parseLogLevel преобразует строку в slog.Level
+func parseLogLevel(level string) slog.Level {
+	switch level {
+	case levelDebug:
+		return slog.LevelDebug
+	case levelInfo:
+		return slog.LevelInfo
+	case levelWarn:
+		return slog.LevelWarn
+	case levelError:
+		return slog.LevelError
+	default:
+		return slog.LevelInfo
+	}
+}
+
+func SetupLogger(env, logLevel string) {
+	var logger *slog.Logger
+
+	switch env {
+	case envLocal:
+		logger = initColorLog(logLevel)
+
+	case envProduction:
+		level := parseLogLevel(logLevel)
+		handler := slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+			Level: level,
+		})
+		logger = slog.New(handler)
+	}
+
 	slog.SetDefault(logger)
 }

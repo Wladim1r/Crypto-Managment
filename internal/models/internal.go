@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"sync"
 	"time"
 )
@@ -52,4 +53,21 @@ type DailyStat struct {
 	Volume      float64
 	QuoteVolume float64
 	Timestamp   time.Time
+}
+
+// Change возвращает изменение цены за 24ч в процентах
+func (ds *DailyStat) change() float64 {
+	if ds.OpenPrice == 0 {
+		return 0
+	}
+	return ((ds.ClosePrice - ds.OpenPrice) / ds.OpenPrice) * 100
+}
+
+// ChangeFormatted возвращает форматированное изменение с эмодзи
+func (ds *DailyStat) ChangeFormatted() string {
+	change := ds.change()
+	if change >= 0 {
+		return fmt.Sprintf("📈 +%.2f%%", change)
+	}
+	return fmt.Sprintf("📉 %.2f%%", change)
 }
