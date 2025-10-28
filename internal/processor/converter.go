@@ -63,5 +63,6 @@ func convertMiniTickerToUniversalTrade(model models.MiniTicker) (models.Universa
 		LowPrice:    lPrice,
 		Volume:      volume,
 		QuoteVolume: quoteVolume,
-	}, nil
+	},
+	nil
 }
