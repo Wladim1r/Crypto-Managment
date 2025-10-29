@@ -26,7 +26,7 @@ func init() {
 
 func main() {
 
-	fmt.Println(cfg)
+	slog.Debug("⚙️ yaml config", "params", cfg)
 	ownlog.SetupLogger(cfg.Env, cfg.LogLevel)
 
 	slog.Info("🚀 Application starting...")
@@ -38,19 +38,24 @@ func main() {
 	signal.Notify(sigs, os.Interrupt)
 	go func() {
 		<-sigs
+		slog.Info("⚠️ Received interrupt signal, preparation for graceful sutdown...")
 		cancel()
 	}()
 
+	// ========== КАНАЛЫ ==========
 	rawMessages := make(chan []byte, 100)
 	procOut := make(chan models.UniversalTrade, 100)
+	dailyStatChan := make(chan *models.DailyStat, 2000) // буфер для ~2000 монет
 
-	ws := websocket.New(websocket.MiniTickerSeveralURL, rawMessages, 5*time.Second)
+	// ========== WEBSOCKET ==========
+	ws := websocket.New(websocket.MiniTickerAllURL, rawMessages, 5*time.Second)
 	go ws.Start(ctx)
 
+	// ========== PROCESSOR ==========
 	proc := processor.New(rawMessages, procOut)
 	go proc.Start(ctx)
 
-	dailyStatChan := make(chan *models.DailyStat)
+	// ========== AGGREGATOR ==========
 	agg := aggregator.NewMetricsProcessor(procOut, dailyStatChan)
 	go agg.Start()
 
@@ -91,6 +96,9 @@ func main() {
 	// }()
 
 	<-ctx.Done()
+
+	slog.Info("⌛ Wait for completion all the processes")
 	time.Sleep(1500 * time.Millisecond)
-	slog.Info("Shutting down...")
+
+	slog.Info("👋 Sutdown complete. Goodbye!")
 }
