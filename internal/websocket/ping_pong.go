@@ -1,15 +1,14 @@
 package websocket
 
 import (
-	"log"
 	"time"
-
+	"log/slog"
 	"github.com/gorilla/websocket"
 )
 
 func (c *WSclient) setupPingPong() {
 	c.conn.SetPingHandler(func(appData string) error {
-		log.Println("Ping from Binance, answer pong")
+		slog.Info("Ping from Binance, answer pong")
 
 		// Отправляем pong обратно
 		err := c.conn.WriteControl(

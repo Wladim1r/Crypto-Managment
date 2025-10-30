@@ -1,40 +1,78 @@
 package models
 
-import "time"
+import (
+	"fmt"
+	"sync"
+	"time"
+)
 
 type UniversalTrade struct {
-	// ============================================
 	// ОБЩИЕ ПОЛЯ (есть у всех типов)
-	// ============================================
 	Symbol    string    `json:"symbol"`     // "BTCUSDT"
 	Timestamp time.Time `json:"timestamp"`  // Когда произошло
-	EventType string    `json:"event_type"` // "aggTrade", "miniTicker", "bookTicker"
+	EventType string    `json:"event_type"` // "aggTrade", "miniTicker"
 
-	// ============================================
 	// ОСНОВНАЯ ЦЕНА (всегда заполнено)
-	// ============================================
 	Price float64 `json:"price"` // Текущая/последняя цена
 
-	// ============================================
 	// ДЛЯ aggTrade
-	// ============================================
-	Quantity float64 `json:"quantity,omitempty"` // Объем сделки
-	//TradeID      int64   `json:"trade_id,omitempty"`       // ID сделки
-	IsBuyerMaker bool `json:"is_buyer_maker,omitempty"` // Направление
+	Quantity     float64 `json:"quantity,omitempty"`       // Объем сделки
+	IsBuyerMaker bool    `json:"is_buyer_maker,omitempty"` // Направление
 
-	// ============================================
 	// ДЛЯ miniTicker (24ч статистика)
-	// ============================================
 	OpenPrice   float64 `json:"open_price,omitempty"`   // Цена открытия 24ч
 	HighPrice   float64 `json:"high_price,omitempty"`   // Максимум 24ч
 	LowPrice    float64 `json:"low_price,omitempty"`    // Минимум 24ч
 	Volume      float64 `json:"volume,omitempty"`       // Объем 24ч
 	QuoteVolume float64 `json:"quote_volume,omitempty"` // Объем в quote asset
+}
 
-	// ============================================
-	// ДЛЯ bookTicker (order book)
-	// ============================================
-	BidPrice float64 `json:"bid_price,omitempty"` // Лучший bid
-	AskPrice float64 `json:"ask_price,omitempty"` // Лучший ask
-	Spread   float64 `json:"spread,omitempty"`    // ask - bid (вычисляется)
+// Window for aggregator @aggTrade
+type Window struct {
+	Symbol    string
+	Interval  string
+	Open      float64
+	High      float64
+	Low       float64
+	Close     float64
+	Quantity  float64
+	Trades    int
+	StartTime time.Time
+	EndTime   time.Time
+	TimeStamp time.Time
+	Mu        sync.Mutex
+}
+
+// DailyStat for aggregator @miniTicker
+type DailyStat struct {
+	Symbol      string
+	OpenPrice   float64
+	HighPrice   float64
+	LowPrice    float64
+	ClosePrice  float64
+	Volume      float64
+	QuoteVolume float64
+	Timestamp   time.Time
+}
+
+// ChangePrice возвращает изменение цены за 24ч в процентах
+func (ds *DailyStat) ChangePrice() float64 {
+	return ds.ClosePrice - ds.OpenPrice
+}
+
+// ChangePercent возвращает изменение цены за 24ч в процентах
+func (ds *DailyStat) ChangePercent() float64 {
+	if ds.OpenPrice == 0 {
+		return 0
+	}
+	return ((ds.ClosePrice - ds.OpenPrice) / ds.OpenPrice) * 100
+}
+
+// ChangeFormatted возвращает форматированное изменение с эмодзи
+func (ds *DailyStat) ChangeFormatted() string {
+	change := ds.ChangePercent()
+	if change >= 0 {
+		return fmt.Sprintf("📈 +%.2f%%", change)
+	}
+	return fmt.Sprintf("📉 %.2f%%", change)
 }
