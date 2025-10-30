@@ -13,7 +13,7 @@ const (
 
 	// All - все монеты, Several - определенные
 	// @3000 -> присылает окно каждые 3 секунды (хотя по факту куда реже)
-	MiniTickerAllURL     = "wss://stream.binance.com:9443/ws/!miniTicker@arr@3000ms"
+	MiniTickerAllURL     = "wss://data-stream.binance.vision/ws/!miniTicker@arr@1000ms"
 	MiniTickerSeveralURL = "wss://stream.binance.com:9443/stream?streams=btcusdt@miniTicker/ethusdt@miniTicker/bnbusdt@miniTicker"
 )
 
@@ -80,7 +80,7 @@ func (c *WSclient) Start(ctx context.Context) {
 			currentDelay = 1 * time.Second
 			slog.Info("✅ WebSocket connected successfully")
 
-			go c.setupPingPong()
+			go c.setupPingPong(ctx)
 			c.readMessage(ctx)
 
 			// Соединение разорвано, ждем перед переподключением
@@ -118,7 +118,7 @@ func (c *WSclient) readMessage(ctx context.Context) {
 			return
 		default:
 			// Устанавливаем таймаут для чтения, чтобы можно было проверить контекст
-			c.conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+			c.conn.SetReadDeadline(time.Now().Add(5 * time.Minute))
 
 			_, msg, err := c.conn.ReadMessage()
 			if err != nil {
