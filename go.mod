@@ -6,7 +6,6 @@ require github.com/gorilla/websocket v1.5.3 // direct
 
 require (
 	github.com/fatih/color v1.18.0
-	github.com/google/uuid v1.6.0
 	github.com/ilyakaznacheev/cleanenv v1.5.0
 	github.com/joho/godotenv v1.5.1
 	github.com/segmentio/kafka-go v0.4.49
